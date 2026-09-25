@@ -102,15 +102,21 @@ def normalize_text(text):
 # ============================================================
 # MLflow + DagsHub configuration
 # ============================================================
+dagshub_token = os.getenv("DAGSHUB_TOKEN")
 
-mlflow.set_tracking_uri(
-    "https://dagshub.com/" "BapunSuna/" "Movie-Sentiment-Classification.mlflow"
-)
+if not dagshub_token:
+    raise EnvironmentError("DAGSHUB_TOKEN environment variable is not set")
 
-dagshub.init(
-    repo_owner="BapunSuna", repo_name="Movie-Sentiment-Classification", mlflow=True
-)
+# Configure MLflow authentication
+os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 
+# DagsHub MLflow tracking URI
+dagshub_url = "https://dagshub.com"
+repo_owner = "BapunSuna"
+repo_name = "Movie-Sentiment-Classification"
+
+mlflow.set_tracking_uri(f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow")
 
 # ============================================================
 # Flask application
@@ -233,4 +239,4 @@ def metrics():
 
 if __name__ == "__main__":
 
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000)
