@@ -80,7 +80,7 @@ jobs:
 
       - name: Create Kubernetes Secret
         run: |
-          kubectl create secret generic dagshub_secret \
+          kubectl create secret generic dagshub-secret \
             --from-literal=DAGSHUB_TOKEN=${{ secrets.DAGSHUB_TOKEN }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to EKS

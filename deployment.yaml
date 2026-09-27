@@ -30,7 +30,7 @@ spec:
         - name: DAGSHUB_TOKEN
           valueFrom:
             secretKeyRef:
-              name: dagshub_secret
+              name: dagshub-secret
               key: DAGSHUB_TOKEN
 
 ---
