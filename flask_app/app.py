@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request
 
-import mlflow
 import pickle
 import os
 import pandas as pd
@@ -8,8 +7,16 @@ import time
 import re
 import string
 import warnings
-import dagshub
 import numpy as np
+from pathlib import Path
+
+try:
+    import mlflow
+except Exception as exc:  # pragma: no cover - defensive for container/local startup
+    mlflow = None
+    MLFLOW_IMPORT_ERROR = exc
+else:
+    MLFLOW_IMPORT_ERROR = None
 
 from prometheus_client import (
     Counter,
@@ -102,21 +109,53 @@ def normalize_text(text):
 # ============================================================
 # MLflow + DagsHub configuration
 # ============================================================
-dagshub_token = os.getenv("DAGSHUB_TOKEN")
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "model.pkl"
+VECTORIZER_PATH = BASE_DIR / "models" / "vectorizer.pkl"
 
-if not dagshub_token:
-    raise EnvironmentError("DAGSHUB_TOKEN environment variable is not set")
-
-# Configure MLflow authentication
-os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
-
-# DagsHub MLflow tracking URI
 dagshub_url = "https://dagshub.com"
 repo_owner = "BapunSuna"
 repo_name = "Movie-Sentiment-Classification"
 
-mlflow.set_tracking_uri(f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow")
+
+def load_model_and_vectorizer():
+    """Load a remote MLflow model when credentials are available, otherwise use the local checkpoint."""
+    dagshub_token = os.getenv("DAGSHUB_TOKEN")
+
+    if dagshub_token and mlflow is not None:
+        try:
+            os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+            os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+            mlflow.set_tracking_uri(f"{dagshub_url}/{repo_owner}/{repo_name}.mlflow")
+
+            model_name = "my_model"
+            model_alias = "champion"
+            model_uri = f"models:/{model_name}@{model_alias}"
+            model = mlflow.pyfunc.load_model(model_uri)
+            print(f"Loaded model from MLflow: {model_uri}")
+            with open(VECTORIZER_PATH, "rb") as vector_file:
+                vectorizer = pickle.load(vector_file)
+            return model, vectorizer
+        except Exception as exc:
+            print(f"MLflow model load failed, falling back to local model: {exc}")
+
+    if MODEL_PATH.exists() and VECTORIZER_PATH.exists():
+        with open(MODEL_PATH, "rb") as model_file:
+            model = pickle.load(model_file)
+        with open(VECTORIZER_PATH, "rb") as vector_file:
+            vectorizer = pickle.load(vector_file)
+        print(f"Loaded local model from {MODEL_PATH}")
+        return model, vectorizer
+
+    if mlflow is None and MLFLOW_IMPORT_ERROR is not None:
+        raise RuntimeError(
+            f"MLflow could not be imported and no local model files were found: {MLFLOW_IMPORT_ERROR}"
+        )
+
+    raise RuntimeError(
+        "No DagsHub token was provided and no local model files were found in the models directory."
+    )
+
 
 # ============================================================
 # Flask application
@@ -157,17 +196,7 @@ PREDICTION_COUNT = Counter(
 # Model and Vectorizer
 # ============================================================
 
-model_name = "my_model"
-model_alias = "champion"
-
-# Use MLflow alias instead of model registry stages
-model_uri = f"models:/{model_name}@{model_alias}"
-
-print(f"Fetching model from: {model_uri}")
-
-model = mlflow.pyfunc.load_model(model_uri)
-
-vectorizer = pickle.load(open("models/vectorizer.pkl", "rb"))
+model, vectorizer = load_model_and_vectorizer()
 
 
 # ============================================================
