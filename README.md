@@ -1,4 +1,3 @@
-````markdown
 # 🎬 Movie Sentiment Classification — End-to-End MLOps
 
 An end-to-end Machine Learning and MLOps project that classifies movie reviews as **positive or negative** and demonstrates the complete journey from ML development to **automated CI/CD and production deployment on Amazon EKS**.
@@ -499,7 +498,7 @@ Movie-Sentiment-Classification/
 ## 1. Clone the repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <Repo URL>
 cd Movie-Sentiment-Classification
 ```
 
