@@ -4,34 +4,13 @@ An end-to-end Machine Learning and MLOps project that classifies movie reviews a
 
 The project integrates **DVC, MLflow, DagsHub, Flask, Docker, GitHub Actions, Amazon ECR, Kubernetes, and Amazon EKS** into a reproducible production-style ML workflow.
 
----
-
-## 🎥 Project Demo
-
-> **Live production API deployed on Amazon EKS**
-
-<!-- Add your screen recording/video/GIF here -->
-
-📺 **Demo:** `Coming soon`
-
-The demo shows:
-
-- ML pipeline execution with DVC
-- Experiment/model tracking with MLflow and DagsHub
-- Flask API
-- Docker containerization
-- GitHub Actions CI/CD
-- Amazon ECR
-- Amazon EKS
-- Kubernetes deployment
-- AWS Load Balancer
-- Live sentiment prediction
-
----
-
 ## 🚀 Live API
 
-The application is deployed on **Amazon EKS** and exposed through an AWS Load Balancer.
+https://movie-sentiment-classification.onrender.com/
+
+The application is deployed on **Render Engine** and its for demo purpose.
+The architecture for demo and production is different.
+
 
 ### Prediction endpoint
 
