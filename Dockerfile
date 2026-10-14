@@ -9,11 +9,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     NLTK_DATA=/root/nltk_data \
     MLFLOW_TRACKING_URI=https://dagshub.com/BapunSuna/Movie-Sentiment-Classification.mlflow \
+    MODEL_LOCAL_PATH=/app/bundled_model \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
-# Copy uv binary directly from official image (much faster than `pip install uv`)
+# Copy uv binary directly from official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Install system dependencies
@@ -35,12 +36,26 @@ RUN python -c "import nltk; \
     && rm -f /root/nltk_data/corpora/*.zip \
     && python -c "import nltk; nltk.data.find('corpora/stopwords'); nltk.data.find('corpora/wordnet'); print('NLTK data OK')"
 
+# =====================================================================
+# Bake MLflow model into the image at build time (placed before COPY . .)
+# =====================================================================
+ARG DAGSHUB_TOKEN
+RUN if [ -n "$DAGSHUB_TOKEN" ]; then \
+        python -c "import os, mlflow; \
+        os.environ['MLFLOW_TRACKING_USERNAME'] = os.environ['DAGSHUB_TOKEN']; \
+        os.environ['MLFLOW_TRACKING_PASSWORD'] = os.environ['DAGSHUB_TOKEN']; \
+        mlflow.set_tracking_uri('https://dagshub.com/BapunSuna/Movie-Sentiment-Classification.mlflow'); \
+        os.makedirs('/app/bundled_model', exist_ok=True); \
+        mlflow.artifacts.download_artifacts(artifact_uri='models:/my_model@champion', dst_path='/app/bundled_model'); \
+        print('Baked MLflow model into /app/bundled_model')"; \
+    else \
+        echo "DAGSHUB_TOKEN not passed at build time; will download at runtime."; \
+    fi
+
 # Copy application code
 COPY . .
 
 EXPOSE 5000
 
 # Start Flask application with Gunicorn directly from .venv
-# - Binds dynamically to Render's $PORT (prevents Render from restarting the deploy)
-# - Uses --preload so Gunicorn binds/loads cleanly and saves RAM on Render Free tier
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --timeout 120 --preload flask_app.app:app"]
