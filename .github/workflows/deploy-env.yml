@@ -1,0 +1,28 @@
+name: Push Secrets to Render
+
+on:
+  push:
+    branches:
+      - main  # Triggers whenever you push code to main
+
+jobs:
+  sync-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Environment Variables to Render
+        run: |
+          curl --request PATCH \
+            --url https://render.com{{ secrets.RENDER_SERVICE_ID }}/env-vars \
+            --header 'accept: application/json' \
+            --header 'authorization: Bearer ${{ secrets.RENDER_API_KEY }}' \
+            --header 'content-type: application/json' \
+            --data '[
+              {
+                "key": "OPENAI_API_KEY",
+                "value": "${{ secrets.OPENAI_API_KEY }}"
+              },
+              {
+                "key": "DATABASE_URL",
+                "value": "${{ secrets.DATABASE_URL }}"
+              }
+            ]'
